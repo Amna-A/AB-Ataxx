@@ -1,3 +1,3 @@
-# Ataxx-with-AlphaBeta
+# Ataxx Withc AlphaBeta Bruning & Transposition Table
 
 Console game
