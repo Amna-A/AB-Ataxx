@@ -1,3 +1,7 @@
-# Ataxx Withc AlphaBeta Bruning & Transposition Table
+# Ataxx 
 
 Console game
+
+With AlphaBeta Pruning & Transposition Table
+
+
