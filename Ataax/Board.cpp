@@ -13,7 +13,9 @@
  string Board::CMD;
  bool Board::game_over = false;
  string Board::JumpsAllowed = "";
- int Board::depth;
+ int Board::depth = 16;
+
+ Report Board::record;
 
  //..............................Search.................................
  int Board::search_mode;
@@ -24,6 +26,7 @@
  double Board::search_time_rt;
  double Board::total_time=0;
  double Board::extra_time;//time remaining after game ends
+ int Board::TimeFlag;
 
 //...........................Hash info...................................
  unsigned long long int Board::ZobristTable[8][8][2];// hash value table
@@ -44,10 +47,10 @@ void Board::setDepth(int _depth){
  }
 void Board::switchPlayer(){
 	if (color == 'b') {
-		color = 'w';
+		setColor('w');
 	}
 	else {
-		color = 'b';
+		setColor('b');
 	}
 }
 void Board::setSize(string input) const { 
@@ -59,13 +62,15 @@ void Board::setMode(int mode) {
 void Board::setTime(const double& time)const {
 	
 	if (search_mode == 1) {
+		total_time = 0;
 		extra_time = min(time * 0.95, 0.5);
 		search_time_ft = time - extra_time;
-		total_time = 0;
+		TimeFlag = 1;
 	}
 	else if (search_mode == 2) {
 		search_time_ft = time;
 		search_time_rt = 31622400;
+		TimeFlag = 2;
 	}
 }
 void Board::setMove(string& m){
@@ -435,9 +440,9 @@ void Board::setMove(string& m){
 		}
 		history.push(board); //save history after the move
 	}
-	//else {
-	//	cout << "\nillegal move !" << endl;
-	//}
+	else {
+		cout << "\n[illegal move !]" << endl;
+	}
  }
 
  bool Board::gameOver(){
@@ -560,16 +565,18 @@ void Board::setMove(string& m){
 	 return a.second > b.second;
  }
  int Board::AlphaBeta(int depth,char color, array<string, 64>& board, int alpha, int beta, stack<array<string, 64>>& history){
+	 //code for AlphaBeta & negascout is referenced from the course notes + references in README.txt
+	//naming as per a1.txt
 
-	 setColor(color);
+	 record.calls++; //get no. of function calls
+	 setColor(color);//make sure color is correct for interial functions
 	 
-	 function_calls++;//calls global counter
 	 if (depth == 0 || game_over == true) { return getValue(); }//when game is over a node was terminal
 
 	 unsigned long long int child_hash = getHash();
 
 	 TTEntry& e = checkTT(child_hash, depth, alpha, beta);
-	 if (alpha >= beta) { return e.value; }
+	 if (alpha >= beta) { record.TTC++; return e.value; }
 
 	 vector<pair<string, unsigned long long int>> children = getChildren(color);//all children of current player
 
@@ -617,6 +624,7 @@ void Board::setMove(string& m){
 
 	 while (true) {
 		 int value;
+		
 		 if (move_idx != -1) {
 			 //get best move
 			 play(fb, fw, Mb, Mw, color,children[move_idx].first,board, JumpsAllowed, history);
@@ -633,7 +641,11 @@ void Board::setMove(string& m){
 				 score = value;
 
 				 if (score > new_alpha) { new_alpha = score; }
-				 if (score >= beta) { cut = true; break; }
+				 if (score >= beta){ 
+					 record.Cut_BF++;
+					 record.successors += 1;//when a cut occurs its a leaf node (used for CBF average)
+					 cut = true; 
+					 break; }
 			 }
 		 }
 		 // get best value move
@@ -654,7 +666,12 @@ void Board::setMove(string& m){
 				 best_hash = temp_hash;
 				 score = value;
 				 if (score > new_alpha) { new_alpha = score; }
-				 if (score >= beta) { cut = true; break; }
+				 if (score >= beta) { 
+					 record.Cut_BF++; 
+					 cut = true;
+					 record.successors += 1; 
+					 break; 
+				 }
 			 }
 		 }
 		 if (start_idx != -1) {
@@ -676,27 +693,40 @@ void Board::setMove(string& m){
 				 best_hash = temp_hash;
 				 score = value;
 				 if (score > new_alpha) { new_alpha = score; }
-				 if (score >= beta) { cut = true; break; }
+				 if (score >= beta) { 
+					 record.Cut_BF++; 
+					 record.successors += 1 + i;//+i we get the sucessor for each iteration
+					 cut = true; 
+					 break; }
 			 }
 		 }
 		 break;
 	 }
 	 if (cut == true) { HH[child_best_move] += 2 ^ depth; }
 	 StoreEntry(e, child_hash, score, depth, alpha, beta, child_best_move, best_hash);
+	 
 	 return score;
  }
  int Board::NegaScout(int depth, char color, array<string, 64>& board, int alpha, int beta, stack<array<string, 64>>& history) {
 	 
-	 //negascout search (mode 2)
+	 record.calls++;
+
+	 //negascout search (called with mode 2)
 	 //NegaScout will find best two moves then start negascout search
+	 //other parts are similar to alphabeta search
+	 //naming here is also similar to the class notes
+
 	 setColor(color);
 	 function_calls++;//calls global counter
 	 if (depth == 0 || game_over == true) { return getValue(); }//when game is over a node was terminal
 	 unsigned long long int child_hash = getHash();
 	 TTEntry& e = checkTT(child_hash, depth, alpha, beta);
-	 if (alpha >= beta) { return e.value; }
+	 record.TTQ++;
+	 if (alpha >= beta) { record.TTC++; return e.value; }
+
 	 vector<pair<string, unsigned long long int>> children = getChildren(color);//all children of current player
 	 if (children.size() == 0) { return getValue(); }
+
 	 string table_best_move = "ms1s2";
 	 string start_move = "ms1s2";
 	 int move_idx = -1;
@@ -742,7 +772,11 @@ void Board::setMove(string& m){
 				 child_best_move = children[move_idx].first;
 				 score = value;
 				 if (score > new_alpha) { new_alpha = score; }
-				 if (score >= beta) { cut = true; break; }
+				 if (score >= beta) { 
+					 record.Cut_BF++; 
+					 record.successors += 1; 
+					 cut = true; break; 
+				 }
 			 }
 		 }
 		 if (start_idx != -1) {
@@ -755,7 +789,12 @@ void Board::setMove(string& m){
 				 child_best_move = children[start_idx].first;
 				 score = value;
 				 if (score > new_alpha) { new_alpha = score; }
-				 if (score >= beta) { cut = true; break; }
+				 if (score >= beta) { 
+					 record.Cut_BF++; 
+					 cut = true; 
+					 record.successors += 1; 
+					 break; 
+				 }
 			 }
 
 		 }
@@ -773,7 +812,7 @@ void Board::setMove(string& m){
 			 child_best_move = children[0].first;
 			 score = value;
 			 if (score > new_alpha) { new_alpha = score; }
-			 if (score >= beta) { cut = true; break; }
+			 if (score >= beta) { record.Cut_BF++; cut = true; record.successors += 1; break; }
 		 }
 		 if (score < beta) {
 			 for (unsigned int i = 1; i < children.size(); ++i) {
@@ -795,7 +834,10 @@ void Board::setMove(string& m){
 					 score = s;
 				 }
 				 if(score >= beta) {
-					 cut = true; break;
+					 cut = true; 
+					 break;
+					 record.Cut_BF++;
+					 record.successors += 1+i;//+i we get the sucessor for each iteration
 				 }
 			 }
 		 }
@@ -803,17 +845,108 @@ void Board::setMove(string& m){
 	 }
 	 if (cut == true) { HH[child_best_move] += 2 ^ depth; }
 	 StoreEntry(e, child_hash, score, depth, alpha, beta, child_best_move, best_hash);
+	 
 	 return score;
+ }
+ bool Board::time_over(std::chrono::time_point<std::chrono::system_clock> startTime) {
+	 std::chrono::duration<double> D = (std::chrono::system_clock::now() - startTime);
+	 if (D.count() >= search_time_rt * 0.85 || D.count() >= search_time_ft) {
+		 return true;
+	 }
+	 return false;
+ }
+ //search 
+ void Board::Search(int d, int alpha, int beta, std::chrono::time_point<std::chrono::system_clock> startTime) {
+
+	 int score=0;
+	 unsigned long long int bestHash;
+	 string best_move;
+
+	 //initialize search parameters at the beginig of every new search
+	 record.calls = 0;
+	 record.Cut_BF = 1;
+	 record.successors = 0;
+	 record.TTC = 0;
+	 record.TTF = 0;
+	 record.TTQ = 0;
+	 
+	 for (int i = 1; i < d; i++) {
+		 // during search AI playes two moves(2 players) and print result and borad
+		 if (search_mode == 1) {
+			 cout << "\n[Mode 1: AlphaBeta search...]" << endl;
+			 score = AlphaBeta(depth, color, board, -100, 100, history); 
+		 }
+		 else if (search_mode == 2) {
+			 cout << "\n[Mode 2: NegaScout search...]" << endl;
+			 score = NegaScout(depth, color, board, -100, 100, history);
+		 }
+		 std::chrono::duration<double> time = std::chrono::system_clock::now() - startTime;
+
+		 if (time_over(startTime)) {
+			 search_results(time, score, i);
+			 break;
+		 }
+		 else {
+			 bestHash = getHash();
+			 best_move = TT[bestHash % 256000].bestMove;
+			 cout << "\nmove: " << best_move << endl;
+
+		 }
+		 search_results(time, score, i);
+	 }
+	 cout << "\nfinal board:" << endl;
+	 PrintBoard();
+	 cout << "\nsearch score: " << score << endl;
+ }
+ //print result of search
+ void Board::search_results(std::chrono::duration<double> time, int _score, int i) {
+	 //time: total time used so far for all iterations in seconds
+	 //speed:# of Alpha-Beta calls / total time so far
+	 //Cut - BF: The average number of successors considered in states in which a cut - off occurs.Count only nodes where at least one move
+	 //i: number of times
+
+	 record.CTM = (color == 'b') ? "##" : "()";
+	 //--------------------------HEADER
+	 cout << left << setw(9) << setfill(' ') << "CTM";
+	 cout << left << setw(9) << setfill(' ') << "D";
+	 cout << left << setw(9) << setfill(' ') << "Time";
+	 cout << left << setw(9) << setfill(' ') << "Calls";
+	 cout << left << setw(9) << setfill(' ') << "Speed";
+	 cout << left << setw(9) << setfill(' ') << "TTQ";
+	 cout << left << setw(9) << setfill(' ') << "TTF";
+	 cout << left << setw(9) << setfill(' ') << "TTC";
+	 cout << left << setw(9) << setfill(' ') << "CBF";
+	 cout << left << setw(9) << setfill(' ') << "Value" << endl;
+
+	 //------------------------PRINT VALUES
+	 cout << left << setw(9) << setfill(' ') << record.CTM;
+	 cout << left << setw(9) << setfill(' ') << i;
+	 cout << left << setw(12) << setfill(' ') << time.count() ;
+	 cout << left << setw(12) << setfill(' ') << record.calls;
+	 cout << left << setw(12) << setfill(' ') << record.calls/time.count();
+	 cout << left << setw(12) << setfill(' ') << record.TTQ;
+	 cout << left << setw(12) << setfill(' ') << record.TTF;
+	 cout << left << setw(12) << setfill(' ') << record.TTC;
+	 cout << left << setw(12) << setfill(' ') << record.successors / record.Cut_BF;
+	 cout << left << setw(12) << setfill(' ') << _score << endl;
+
+	 //cout << "\nCTM\t D\t Time\t      Calls\t    Speed\t    TTQ\t    TTF\t    TTC\t    CBF\t    Value" << endl;
+	 //cout << record.CTM << "\t " << i << "\t " << time.count() 
+		//  << "\t" << record.calls << "\t    " << record.calls / time.count() << "\t    "
+		//  << record.TTQ << "\t    " << record.TTF << "\t    " <<record.TTC<<"\t    " 
+		//  << record.successors/record.Cut_BF << "\t    " << _score;
  }
 
  //--------------------------------------------Start GAME Function------------------------------------
  void Board::Game() {
+
 	 string UserInput;
 	 //promt user to initialize the board
 	 cout << "Inter (i ) followed by the size of the board to initialize the game or (q) to exit at any time" << endl;
 	 while (true) {
 		 cout << "Initialize Board: ";
 		 getline(cin, UserInput);
+	 START:
 		 int dimention = UserInput[2] - '0';
 		 if (UserInput == "s" || UserInput == "S") { //make sure user is not creating board before initialization
 			 cout << "[i command must be given before s]" << endl;
@@ -835,10 +968,11 @@ void Board::setMove(string& m){
 
 
 	 cout << "[initializing board of size " << n << "]" << endl;
-	 //display default board upon initilization
+	 //display default board upon initilization for testing
 	 DisplayBoard();
-
+	 //initialize the table
 	 initTable(n);
+
 	 string cmd;
 	 char player1, player2;
 
@@ -858,6 +992,10 @@ MENUE:
 			 PrintBoard();
 			 history.push(board);
 			 continue;
+		 }
+		 else if (CMD[0] == 'i' && CMD[1] == ' ' && isdigit(CMD[2])) {
+			 UserInput = CMD;
+			 goto START;
 		 }
 		 else if (CMD[0] == 'b') {
 		
@@ -947,41 +1085,61 @@ MENUE:
 		 }
 		 else if (CMD[0] == 'q') { cout << "\nQuitting Game.. " << endl; exit(0); }
 
-		 else if (CMD[0] == 'g') { goto SEARCH; }//start search
+		 else if (CMD[0] == 'g') { 
+			 goto SEARCH; 
+		 }//start search
 
 		 else { cout << "\nInvalid Command " << endl; }
 	 }
 
 
  SEARCH:
+	 //search start at this tag:
+	 //start search, print results, player switch, go back to get user input again
 
-	 auto startTime = std::chrono::system_clock::now();
-	 //std::chrono::duration<double> time = (std::chrono::system_clock::now() - startTime);
-	 int score;
-	 //during search AI playes two moves (2 players) and print result and borad
-	 if (search_mode == 1) {
-		 cout << "\n[Mode 1: AlphaBeta search...]" << endl;
-		 
-		 score = AlphaBeta(depth, player1, board, -100, 100, history);
-		 gameOver();//check if game is over after each play
-		 //commentting next two lines lets you play against computer
-		 score = AlphaBeta(depth, player2, board, -100, 100, history);
-		 gameOver(); 
+	 //check if we need ft or rt for prenting startimg info
+	 if (TimeFlag == 2) {
+		 //we have rt set (show ft for each move till the end of search )
+		 cout << "FT: " << search_time_ft << endl;
 	 }
-	 else if (search_mode == 2) {
-		 cout << "\n[Mode 2: NegaScout search...]" << endl;
+	 else {//we have ft set , set a fixed time for each player per move per game
+		//we get FT based on empty spaces left on board
+		 //print starting time settings at begining of search(saves previous output when 'g' is enetered again)
+		 search_time_ft = search_time_rt * 0.9 / (getScore('-') + 1);
+		 cout << "RT: " << search_time_rt + extra_time << endl;
+		 cout << "Total time used: " << total_time << endl;
+		 cout << "Allocated: " << search_time_ft << endl;
+	 }
 
-		 score = NegaScout(depth, player1, board, -100, 100, history);
-		 gameOver();
-		 score = NegaScout(depth, player2, board, -100, 100, history);
-		 gameOver();
+	 if (TimeFlag == 2) {
+		 //check if we are exceeding time limit
+		 if (search_time_rt <= 0) {
+			 cout << "Search over ..." << endl;
+			 gameOver();
+			 return;
+		 }
 	 }
-	 cout << "\nfinal board:" << endl;
-	 PrintBoard();
-	 cout << "\nsearch score: " << score << endl;
+	 std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
+	 
+	 //start search (iterative depening)
+	 Search(depth, -100, 100, startTime);
+
+	 //end search
+	 std::chrono::duration<double> D = (std::chrono::system_clock::now() - startTime);
+
+	 double used_time = D.count();
+	 search_time_rt -= used_time;
+	 total_time += used_time;
+	 if (TimeFlag == 1) {
+		 cout << "=======================TIME RESULT=============================" << endl;
+		 cout << "RT: " << search_time_rt + extra_time << endl;
+		 cout << "Total Time Used: " << total_time << endl;
+		 cout << "Time Used: " << used_time << endl;
+	 }
+	 switchPlayer();
+	 gameOver();
 	 setMode(0);
 	 goto MENUE;
-	 
 
  }
 

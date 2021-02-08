@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <chrono> 
 #include <random>
+#include <iomanip>
 
 using namespace std;
 
@@ -25,6 +26,16 @@ typedef struct TTEntry {
 	int value;								// node value
 	ValueType f;							// bound type
 }TTEntry;
+typedef struct Report {//the results of search are reported and printed from here
+	//names as per a1.txt
+	string CTM;						//color to move
+	unsigned int calls;		        // no. of function calss;
+	unsigned int successors;        //successors considered in states in which a cut - off occurs.
+	unsigned int TTQ;				// no. of TT queries;
+	unsigned int TTF;				// no. of position founded;
+	unsigned int TTC;				// no. of TT look-up cut off;
+	unsigned int Cut_BF;				// no. cut-off;
+}Report;
 
 class Board {
 	static int n; //dimention
@@ -37,6 +48,8 @@ class Board {
 	static unordered_multiset<string>Mw;
 	static string CMD;
 	static string JumpsAllowed;
+
+	static Report record;
 
 	//...........................Hash info & TT...............................
 	static unsigned long long int ZobristTable[8][8][2];// hash value table
@@ -52,7 +65,7 @@ class Board {
 	static double search_time_rt;
 	static double total_time;
 	static double extra_time;//time remaining after game ends
-
+	static int TimeFlag;
 public:
 	static array<string, 64> board;
 	static stack<array<string, 64>> history;
@@ -117,6 +130,9 @@ public:
 	//------------------------search--------------------------------------
 	int AlphaBeta(int depth,char color, array<string, 64>& board, int alpha, int beta, stack<array<string, 64>>& history);
 	int NegaScout(int depth, char color, array<string, 64>& board, int alpha, int beta, stack<array<string, 64>>& history);
+	void Search(int d, int alpha, int beta, std::chrono::time_point<std::chrono::system_clock> startTime);
+	bool time_over(std::chrono::time_point<std::chrono::system_clock> startTime);
+	void search_results(std::chrono::duration<double> time, int _score, int i);
 	//-------------------------------GAME---------------------------------
 	void Game();
 	};

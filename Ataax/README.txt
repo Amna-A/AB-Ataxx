@@ -22,6 +22,8 @@ assignment (fellow students, books, internet, ...) and how they contributed:
     - https://www.youtube.com/watch?v=xBXHtz4Gbdo
     - https://www.mygreatlearning.com/blog/alpha-beta-pruning-in-ai/
     - https://arxiv.org/ftp/arxiv/papers/1505/1505.01603.pdf
+    - Conversation with previous graduates (helped with general advice about calculation of parameters and ABsearch 
+      code structure)
 
 3. Transposition Table:
 
