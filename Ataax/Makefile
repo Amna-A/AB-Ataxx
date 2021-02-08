@@ -1,15 +1,26 @@
+CC := g++
+CCOPTS=-Wall -Wextra -O3 -std=c++17
 
-ataxx: ataxx.o Board.o
-	g++ ataxx.o Board.o -o ataxx
+Ataxx_DEP_OBJ := Ataxx.o Board.o
+Header:=Board.h
 
-ataxx.o: ataxx.cpp 
-	g++ -c ataxx.cpp
+all: ataxx
 
-Board.o: Board.cpp Board.h
-	g++ -c Board.cpp
+%.o: %.C DEPS Header
+	$(CC) ${CCOPTS}  -c -o $@ $<
+
+ataxx: $(Ataxx_DEP_OBJ)
+	${CC} ${CCOPTS} -o ataxx $^
 
 clean:
-	rm *.o ataxx
+	rm -f Ataxx *.o
+
+	
+
+
+
+
+
 	
 
 
