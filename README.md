@@ -1,4 +1,4 @@
-# Ataxx 
+# Ataxx (currently under serious fixes!!!!)
 
 Console game
 
