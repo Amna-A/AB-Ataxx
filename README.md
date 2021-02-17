@@ -1,6 +1,8 @@
 # Ataxx 
 
-Console game
+Console game.
+This is my first program in C++
+learning C++ through game development
 
 With AlphaBeta Pruning & Transposition Table
 
