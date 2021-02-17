@@ -959,7 +959,7 @@ void Board::Search(int d, int alpha, int beta, std::chrono::time_point<std::chro
 		}
 		search_results(time, score, i);
 	}
-	//MakeLegalMoves(fb, fw, Mb, Mw, color, best_move, board, JumpsAllowed, history);// execute current move if not made
+	MakeLegalMoves(fb, fw, Mb, Mw, color, best_move, board, JumpsAllowed, history);// execute current move if not made
 	cout << "\nmove: " << best_move.substr(1, 4) << endl;
 	cout << "search score: " << score << endl;
 }
