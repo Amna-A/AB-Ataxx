@@ -1,4 +1,4 @@
-# Ataxx 
+# Ataxx [![HitCount](http://hits.dwyl.com/{Amna-A}/{Ataxx-with-AlphaBeta}.svg)](http://hits.dwyl.com/{Amna-A}/{Ataxx-with-AlphaBeta})
 
 Console game.
 
