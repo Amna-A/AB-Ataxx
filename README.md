@@ -7,7 +7,7 @@ learning C++ through game development :woman_dancing:
 
 With AlphaBeta Pruning & Transposition Table
 
-##How to use:
+## How to use:
 
 1. Initialize your board: i n (n is from 4 to 8)
 2. Set your board: s
