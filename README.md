@@ -1,4 +1,4 @@
-# :chess_pawn: Ataxx ![Hits](https://hitcounter.pythonanywhere.com/count/tag.svg?url=https%3A%2F%2Fgithub.com%2FAmna-A%2FAtaxx-with-AlphaBeta)
+# Ataxx ![Hits](https://hitcounter.pythonanywhere.com/count/tag.svg?url=https%3A%2F%2Fgithub.com%2FAmna-A%2FAtaxx-with-AlphaBeta)
 Console game.
 
 This is my first program in C++ :hugs:
